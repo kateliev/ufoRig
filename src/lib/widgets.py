@@ -4,12 +4,14 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.3
+__version__ = 1.4
 
 # - Dependencies --------------------------------------------
 import plistlib
 import xml.etree.ElementTree as ET
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+from .func import xml_pretty_print
 
 # - Config ----------------------------
 cfg_trw_columns_class = ['Tag/Key', 'Data/Value', 'Type']
@@ -204,7 +206,14 @@ class trw_xml_explorer(trw_tree_explorer):
 		self.blockSignals(False)
 
 	def get_tree(self):
-		pass
+		root = self.invisibleRootItem().child(0)
+		new_element = ET.Element(None)
+		
+		self.__tree_walker_get(root, new_element)
+		xml_pretty_print(new_element)
+		
+		root_element = ET.ElementTree(new_element)
+		return root_element
 
 class trw_plist_explorer(trw_tree_explorer):
 	''' pList parsing and exporting tree widget'''
@@ -214,7 +223,7 @@ class trw_plist_explorer(trw_tree_explorer):
 		if isinstance(node, tuple):
 			node_text, node_data = str(node[0]), node[1]
 			node_data_text = str(node_data)
-			node_type = str(type(node[1]))
+			node_type = str(type(node[1]).__name__)
 
 			new_item = QtWidgets.QTreeWidgetItem(parent, [node_text, node_data_text, node_type])
 			new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
@@ -239,7 +248,18 @@ class trw_plist_explorer(trw_tree_explorer):
 				self.__tree_walker_set(item, parent)
 		
 	def __tree_walker_get(self, node, parent):
-		pass
+		if node.childCount():
+			new_element = eval('{}({})'.format(node.text(2), node.text(0)))
+
+			if len(node.text(1)):
+				new_element.text = node.text(1)
+			
+			for c in range(node.childCount()):
+				self.__tree_walker_get(node.child(c), new_element)
+
+			parent.append(new_element)
+		else:
+			parent.set(node.text(0), node.text(1))
 
 	def set_tree(self, data, headers):
 		self.blockSignals(True)
@@ -261,14 +281,7 @@ class trw_plist_explorer(trw_tree_explorer):
 		self.blockSignals(False)
 
 	def get_tree(self):
-		root = self.invisibleRootItem().child(0)
-		new_element = ET.Element(None)
-		
-		self.__tree_walker_get(root, new_element)
-		xml_pretty_print(new_element)
-		
-		root_element = ET.ElementTree(new_element)
-		return root_element
+		pass
 
 class wgt_designspace_manager(QtWidgets.QWidget):
 	def __init__(self, data_tree, status_hook):

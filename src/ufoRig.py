@@ -15,12 +15,10 @@ import plistlib
 import xml.etree.ElementTree as ET
 
 from lib import widgets
-from lib.func import xml_pretty_print
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 # - Init ----------------------------------------------------
-app_name, app_version = 'ufoRig', '1.35'
+app_name, app_version = 'ufoRig', '1.36'
 
 # - Config --------------------------------------------------
 cfg_file_open_formats = 'UFO Designspace (*.designspace);; UFO (*.plist);;'
