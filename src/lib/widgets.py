@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.4
+__version__ = 1.5
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from .func import xml_pretty_print
+from .objects import data_collector
 
 # - Config ----------------------------
 cfg_trw_columns_class = ['Tag/Key', 'Data/Value', 'Type']
@@ -248,18 +249,13 @@ class trw_plist_explorer(trw_tree_explorer):
 				self.__tree_walker_set(item, parent)
 		
 	def __tree_walker_get(self, node, parent):
-		if node.childCount():
-			new_element = eval('{}({})'.format(node.text(2), node.text(0)))
+		new_element = data_collector(node.text(0), node.text(1), node.text(2))
 
-			if len(node.text(1)):
-				new_element.text = node.text(1)
-			
+		if node.childCount():
 			for c in range(node.childCount()):
 				self.__tree_walker_get(node.child(c), new_element)
-
-			parent.append(new_element)
-		else:
-			parent.set(node.text(0), node.text(1))
+		
+		parent.append(new_element)	
 
 	def set_tree(self, data, headers):
 		self.blockSignals(True)
