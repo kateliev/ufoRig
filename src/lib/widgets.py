@@ -248,14 +248,15 @@ class trw_plist_explorer(trw_tree_explorer):
 			for item in node.items():
 				self.__tree_walker_set(item, parent)
 		
-	def __tree_walker_get(self, node, parent):
+	def __tree_walker_get(self, node):
 		new_element = data_collector(node.text(0), node.text(1), node.text(2))
 
 		if node.childCount():
 			for c in range(node.childCount()):
-				self.__tree_walker_get(node.child(c), new_element)
+				sub_element = self.__tree_walker_get(node.child(c))
+				new_element.append(sub_element)
 		
-		parent.append(new_element)	
+		return new_element.export()
 
 	def set_tree(self, data, headers):
 		self.blockSignals(True)
@@ -277,12 +278,16 @@ class trw_plist_explorer(trw_tree_explorer):
 		self.blockSignals(False)
 
 	def get_tree(self):
-		pass
+		root = self.invisibleRootItem().child(0)
+		return self.__tree_walker_get(root)
 
 class wgt_designspace_manager(QtWidgets.QWidget):
 	def __init__(self, data_tree, status_hook):
 		super(wgt_designspace_manager, self).__init__()
 		
+		# - Init
+		self.file_type = '.designspace'
+
 		# - Widgets
 		# -- Trees
 		self.trw_explorer = trw_xml_explorer(status_hook)
@@ -297,6 +302,9 @@ class wgt_plist_manager(QtWidgets.QWidget):
 	def __init__(self, data_tree, status_hook):
 		super(wgt_plist_manager, self).__init__()
 		
+		# - Init
+		self.file_type = '.plist'
+
 		# - Widgets
 		# -- Trees
 		self.trw_explorer = trw_plist_explorer(status_hook)

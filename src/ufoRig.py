@@ -76,14 +76,21 @@ class main_ufoRig(QtWidgets.QMainWindow):
 		
 		# - Get data from current active tab
 		curr_tab = self.wgt_tabs.widget(self.wgt_tabs.currentIndex())
-		curr_data = curr_tab.trw_explorer.get_tree()
-		export_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', str(curr_path), cfg_file_open_formats)
 
-		if len(export_file[0]):
-			with open(export_file[0], 'wb') as exportFile:
-				curr_data.write(exportFile, encoding='utf-8', xml_declaration=True)
+		if curr_tab.file_type == '.designspace':
+			export_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', str(curr_path), 'UFO Designspace (*.designspace)')
+			curr_data = curr_tab.trw_explorer.get_tree()
+
+			if len(export_file[0]):
+				with open(export_file[0], 'wb') as exportFile:
+					curr_data.write(exportFile, encoding='utf-8', xml_declaration=True)
+
+		elif curr_tab.file_type == '.plist':
+			#export_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', str(curr_path), 'UFO (*.plist)')
+			curr_data = curr_tab.trw_explorer.get_tree()
+			print(curr_data)
 		
-		self.status_bar.showMessage('File Saved: {}'.format(export_file[0]))
+		#self.status_bar.showMessage('File Saved: {}'.format(export_file[0]))
 				
 	def file_open(self):
 		curr_path = pathlib.Path(__file__).parent.absolute()
