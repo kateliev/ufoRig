@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.5
+__version__ = 1.6
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -242,7 +242,18 @@ class trw_plist_explorer(trw_tree_explorer):
 
 		elif isinstance(node, list):
 			for item in node:
-				self.__tree_walker_set(item, parent)
+				if isinstance(item, (list, dict)):
+					sub_node_type = str(type(item).__name__)
+					new_sub_item = QtWidgets.QTreeWidgetItem(parent, ['ListItem', '', sub_node_type])
+					new_sub_item.setIcon(0, self.folder_children_icon)
+					new_sub_item.setForeground(0, self.brush_gray)
+					new_sub_item.setFont(0, self.font_italic)
+					new_sub_item.setForeground(2, self.brush_gray)
+					new_sub_item.setFont(2, self.font_italic)
+
+					self.__tree_walker_set(item, new_sub_item)
+				else:
+					self.__tree_walker_set(item, parent)
 		
 		elif isinstance(node, dict):
 			for item in node.items():
@@ -256,7 +267,7 @@ class trw_plist_explorer(trw_tree_explorer):
 				sub_element = self.__tree_walker_get(node.child(c))
 				new_element.append(sub_element)
 		
-		return new_element.export()
+		return new_element.export(evaluate=True)
 
 	def set_tree(self, data, headers):
 		self.blockSignals(True)

@@ -18,7 +18,7 @@ from lib import widgets
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 # - Init ----------------------------------------------------
-app_name, app_version = 'ufoRig', '1.36'
+app_name, app_version = 'ufoRig', '1.37'
 
 # - Config --------------------------------------------------
 cfg_file_open_formats = 'UFO Designspace (*.designspace);; UFO (*.plist);;'
@@ -73,7 +73,7 @@ class main_ufoRig(QtWidgets.QMainWindow):
 	# -- Classes Reader
 	def file_save(self):
 		curr_path = pathlib.Path(__file__).parent.absolute()
-		
+	
 		# - Get data from current active tab
 		curr_tab = self.wgt_tabs.widget(self.wgt_tabs.currentIndex())
 
@@ -86,11 +86,14 @@ class main_ufoRig(QtWidgets.QMainWindow):
 					curr_data.write(exportFile, encoding='utf-8', xml_declaration=True)
 
 		elif curr_tab.file_type == '.plist':
-			#export_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', str(curr_path), 'UFO (*.plist)')
+			export_file = QtWidgets.QFileDialog.getSaveFileName(self, 'Save file', str(curr_path), 'UFO (*.plist)')
 			curr_data = curr_tab.trw_explorer.get_tree()
-			print(curr_data)
+			
+			if len(export_file[0]):
+				with open(export_file[0], 'wb') as exportFile:
+					plistlib.dump(curr_data[1], exportFile)
 		
-		#self.status_bar.showMessage('File Saved: {}'.format(export_file[0]))
+		self.status_bar.showMessage('File Saved: {}'.format(export_file[0]))
 				
 	def file_open(self):
 		curr_path = pathlib.Path(__file__).parent.absolute()

@@ -17,13 +17,15 @@ class data_collector(object):
 	def append(self, data):
 		self.__data.append(data)
 
-	def export(self, evaluate=True):
-		if self.__export_type is None:
-			return_value = eval(self.value) if evaluate else self.value
-			return (self.name, return_value)
+	def export(self, evaluate=False):
+		if len(self.__data) and self.__export_type is not None:
+			return (self.name, self.__export_type(self.__data))
 		else:
-			if len(self.__data):
-				return (self.name, self.__export_type(self.__data))
+			if self.__export_type is None or evaluate:
+				try:
+					return (self.name, eval(self.value))
+				except (NameError, SyntaxError):
+					return (self.name, self.value)
 			else:
 				return (self.name, self.__export_type(self.value))
 
@@ -31,12 +33,11 @@ class data_collector(object):
 if __name__ == "__main__":
 	a = data_collector('int', '5', int)
 	b = data_collector('list', None, list)
-	b2 = data_collector('list2', None, list)
+	b2 = data_collector('list2', '[1,2,3]', list)
 	c = data_collector('dict', None, dict)
 	b.append(a.export())
-	b2.append(a.export())
 	c.append(b.export())
-	c.append(b2.export())
+	c.append(b2.export(True))
 	print(a.export())
 	print(b.export())
 	print(c.export())
