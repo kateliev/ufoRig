@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.0
+__version__ = 1.2
 
 # - Classes -------------------------------------------------
 class data_collector(object):
@@ -14,20 +14,26 @@ class data_collector(object):
 		self.__export_type = export_type if not isinstance(export_type, str) else (eval(export_type))
 		self.__data = []
 
+	def __smart_return(self, value):
+		if self.name is not None:
+			return (self.name, value)
+		else:
+			return value
+
 	def append(self, data):
 		self.__data.append(data)
 
 	def export(self, evaluate=False):
 		if len(self.__data) and self.__export_type is not None:
-			return (self.name, self.__export_type(self.__data))
+			return self.__smart_return(self.__export_type(self.__data))
 		else:
 			if self.__export_type is None or evaluate:
 				try:
-					return (self.name, eval(self.value))
+					return self.__smart_return(eval(self.value))
 				except (NameError, SyntaxError):
-					return (self.name, self.value)
+					return self.__smart_return(self.value)
 			else:
-				return (self.name, self.__export_type(self.value))
+				return self.__smart_return(self.__export_type(self.value))
 
 
 if __name__ == "__main__":
