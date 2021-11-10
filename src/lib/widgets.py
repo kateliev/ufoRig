@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.7
+__version__ = 1.8
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -17,33 +17,56 @@ from .objects import data_collector
 # - Config ----------------------------
 cfg_trw_columns_class = ['Tag/Key', 'Data/Value', 'Type']
 
+# - Helper functions ----------------------------------------
+def set_font(widget, style):
+	font = widget.font()
+	font.setItalic('i' in style)
+	font.setBold('b' in style)
+	return font
+
+def set_color(qt_color_name, alpha=255):
+	color = QtGui.QColor(qt_color_name)
+	color.setAlpha(alpha)
+	return color
+
+def set_brush(qt_color_name, alpha=255):
+	return QtGui.QBrush(set_color(qt_color_name, alpha))
+
+def string_plural(count, text='items'):
+	text = text[:-1] if count == 1 else text
+	return '{} {}'.format(count, text)
+
 # - Widgets -------------------------------------------------
 # -- Shared
 class trw_tree_explorer(QtWidgets.QTreeWidget):
 	def __init__(self, status_hook):
 		super(trw_tree_explorer, self).__init__()
 		
-		# - Styling
-		# -- Fonts
-		self.font_bold = self.font()
-		self.font_bold.setBold(True)
-		self.font_italic = self.font()
-		self.font_italic.setItalic(True)
-		self.brush_gray = QtGui.QBrush(QtGui.QColor('Gray'))
-		self.attrib_background = QtGui.QColor('Yellow')
+		# - Init
 		self.status_hook = status_hook
+		self.itemClicked.connect(self.set_status)
+		self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+		# - Drag and drop
+		self.setDragEnabled(True)
+		self.setDragDropMode(self.InternalMove)
+		self.setDropIndicatorShown(True)
+
+		# - Styling
+		self.setAlternatingRowColors(True)
+		
+		# -- Fonts
+		self.font_bold = set_font(self, 'b')
+		self.font_italic = set_font(self, 'i')
+		self.brush_gray = set_color('Gray')
+		self.attrib_background = set_color('Yellow', 15)
 
 		# -- Icons
 		self.folder_attrib_name = 'attributes'
 		self.folder_attrib_icon = self.style().standardIcon(QtWidgets.QStyle.SP_FileIcon)
+		
 		self.folder_children_name = 'children'
-		self.folder_children_icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirIcon)
-
-		# - Drag and drop
-		self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-		self.setDragEnabled(True)
-		self.setDragDropMode(self.InternalMove)
-		self.setDropIndicatorShown(True)
+		self.folder_children_icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirIcon)	
 
 		# - Menus
 		self.context_menu = QtWidgets.QMenu(self)
@@ -123,15 +146,11 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 				else:
 					attributes += 1
 
-			status_message = 'Info: Tag <{}> with {} / {}'.format(item.text(0), self._string_plural(tags), self._string_plural(attributes, 'attributes'))
+			status_message = 'Info: Tag <{}> with {} / {}'.format(item.text(0), string_plural(tags), string_plural(attributes, 'attributes'))
 		else:
 			status_message = 'Info: Attribute "{}" of <{}>'.format(item.text(0), item.parent().text(0))
 		
-		self.status_hook.showMessage(status_message)
-
-	def _string_plural(self, count, text='items'):
-		text = text[:-1] if count == 1 else text
-		return '{} {}'.format(count, text)
+		self.status_hook.showMessage(status_message)	
 
 # -- XML -----------------------------------
 class trw_xml_explorer(trw_tree_explorer):
@@ -159,9 +178,6 @@ class trw_xml_explorer(trw_tree_explorer):
 			new_attribute.setIcon(0, self.folder_attrib_icon)
 			new_attribute.setFont(2, self.font_italic)
 			new_attribute.setForeground(2, self.brush_gray)
-			
-			# - Set Styling
-			self.attrib_background.setAlpha(15)
 			
 			for col in range(self.columnCount()):
 				new_attribute.setBackground(col, self.attrib_background)
@@ -202,8 +218,6 @@ class trw_xml_explorer(trw_tree_explorer):
 		self.collapseAll()
 
 		# - Set
-		self.itemClicked.connect(self.set_status)
-		self.setAlternatingRowColors(True)
 		self.blockSignals(False)
 
 	def get_tree(self):
@@ -286,8 +300,6 @@ class trw_plist_explorer(trw_tree_explorer):
 		self.collapseAll()
 
 		# - Set
-		self.itemClicked.connect(self.set_status)
-		self.setAlternatingRowColors(True)
 		self.blockSignals(False)
 
 	def get_tree(self):
