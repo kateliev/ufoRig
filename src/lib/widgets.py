@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.8
+__version__ = 1.9
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -16,6 +16,7 @@ from .objects import data_collector
 
 # - Config ----------------------------
 cfg_trw_columns_class = ['Tag/Key', 'Data/Value', 'Type']
+cfg_data_types = ['tag', 'attribute', 'str', 'int', 'float', 'bool', 'tuple', 'list', 'dict']
 
 # - Helper functions ----------------------------------------
 def set_font(widget, style):
@@ -32,8 +33,8 @@ def set_color(qt_color_name, alpha=255):
 def set_brush(qt_color_name, alpha=255):
 	return QtGui.QBrush(set_color(qt_color_name, alpha))
 
-def string_plural(count, text='items'):
-	text = text[:-1] if count == 1 else text
+def string_plural(count, text='items', remove=1):
+	text = text[:-remove] if count == 1 else text
 	return '{} {}'.format(count, text)
 
 # - Widgets -------------------------------------------------
@@ -46,6 +47,10 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 		self.status_hook = status_hook
 		self.itemClicked.connect(self.set_status)
 		self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+
+		# - String
+		self.__info_parent = 'Info: Tag <{}> with {} / {}'
+		self.__info_child =  'Info: Attribute "{}" of <{}>'
 
 		# - Drag and drop
 		self.setDragEnabled(True)
@@ -69,43 +74,61 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 		self.folder_children_icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirIcon)	
 
 		# - Menus
-		self.context_menu = QtWidgets.QMenu(self)
-		self.context_menu.setTitle('Actions:')
-		act_add_tag = QtWidgets.QAction('New Tag', self)
-		act_add_attrib = QtWidgets.QAction('New Attribute', self)
-		act_delItem = QtWidgets.QAction('Remove', self)
-		act_dupItem = QtWidgets.QAction('Duplicate', self)
-		act_uneItem = QtWidgets.QAction('Unnest', self)
+		self.menu_context = QtWidgets.QMenu(self)
+		self.menu_context.setTitle('Actions')
+
+		self.menu_type = QtWidgets.QMenu(self)
+		self.menu_type.setTitle('Set Type')
+
+		# -- Actions
+		act_add_parent = QtWidgets.QAction('New Parent', self)
+		act_add_child = QtWidgets.QAction('New Child', self)
+		act_item_remove = QtWidgets.QAction('Remove', self)
+		act_item_duplicate = QtWidgets.QAction('Duplicate', self)
+		act_item_eject = QtWidgets.QAction('Eject', self)
 		
-		self.context_menu.addAction(act_add_tag)
-		self.context_menu.addAction(act_add_attrib)
-		self.context_menu.addSeparator()
-		self.context_menu.addAction(act_delItem)
-		self.context_menu.addAction(act_dupItem)
-		self.context_menu.addSeparator()
-		self.context_menu.addAction(act_uneItem)
+		self.menu_context.addAction(act_add_parent)
+		self.menu_context.addAction(act_add_child)
+		self.menu_context.addSeparator()
+		self.menu_context.addMenu(self.menu_type)
+		self.menu_context.addSeparator()
+		self.menu_context.addAction(act_item_remove)
+		self.menu_context.addAction(act_item_duplicate)
+		self.menu_context.addSeparator()
+		self.menu_context.addAction(act_item_eject)
 		
-		act_add_tag.triggered.connect(lambda: self._addItem(is_folder=True))
-		act_add_attrib.triggered.connect(lambda: self._addItem(is_folder=False))
-		act_dupItem.triggered.connect(lambda: self._duplicateItems())
-		act_uneItem.triggered.connect(lambda: self._unnestItem())
-		act_delItem.triggered.connect(lambda: self._removeItems())
+		act_add_parent.triggered.connect(lambda: self._item_add(is_parent=True))
+		act_add_child.triggered.connect(lambda: self._item_add(is_parent=False))
+		act_item_duplicate.triggered.connect(lambda: self._item_duplicate())
+		act_item_eject.triggered.connect(lambda: self._item_eject())
+		act_item_remove.triggered.connect(lambda: self._item_remove())
+
+		for data_type in cfg_data_types:
+			act_new = QtWidgets.QAction(data_type, self)
+			self.menu_type.addAction(act_new)
+			act_new.triggered.connect(lambda checked, data=data_type: self._item_type(data))
 
 	# - Internals --------------------------
-	def _removeItems(self):
+	def _item_type(self, data_type):
+		root = self.invisibleRootItem()
+		
+		for item in self.selectedItems():
+			item.setText(2, data_type)
+
+	def _item_remove(self):
 		root = self.invisibleRootItem()
 		
 		for item in self.selectedItems():
 			(item.parent() or root).removeChild(item)
 
-	def _addItem(self, data=None, is_folder=False):
-		defualt_text = 'New Tag' if is_folder else 'New Attribute'
+	def _item_add(self, data=None, is_parent=False):
+		defualt_text = 'New Tag' if is_parent else 'New Attribute'
 		new_item_data = [defualt_text] if data is None else data
 		new_item = QtWidgets.QTreeWidgetItem(new_item_data)
 		new_item.setFont(2, self.font_italic)
 		new_item.setForeground(2, self.brush_gray)
 		
-		if is_folder:	
+		if is_parent:	
 			new_item.setIcon(0, self.folder_children_icon)
 			new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
 		else:
@@ -115,11 +138,11 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 		parent = self.selectedItems()[0].parent()
 		parent.addChild(new_item)
 
-	def _duplicateItems(self):
+	def _item_duplicate(self):
 		for item in self.selectedItems():
 			item.parent().addChild(item.clone())
 		
-	def _unnestItem(self):
+	def _item_eject(self):
 		root = self.invisibleRootItem()
 		
 		for item in reversed(self.selectedItems()):
@@ -133,24 +156,31 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 	
 	# - Event Handlers ----------------------
 	def contextMenuEvent(self, event):
-		self.context_menu.popup(QtGui.QCursor.pos())
+		self.menu_context.popup(QtGui.QCursor.pos())
 
 	@QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem, int)
 	def set_status(self, item, col):
-		if item.childCount() and item.text(2) != 'attribute':
-			tags, attributes = 0, 0
+		status_message = ''
 
-			for c in range(item.childCount()):
-				if item.child(c).childCount():
-					tags += 1
-				else:
-					attributes += 1
+		try:
+			if item.childCount() and item.text(2) != 'attribute':
+				tags, attributes = 0, 0
 
-			status_message = 'Info: Tag <{}> with {} / {}'.format(item.text(0), string_plural(tags), string_plural(attributes, 'attributes'))
-		else:
-			status_message = 'Info: Attribute "{}" of <{}>'.format(item.text(0), item.parent().text(0))
-		
-		self.status_hook.showMessage(status_message)	
+				for c in range(item.childCount()):
+					if item.child(c).childCount():
+						tags += 1
+					else:
+						attributes += 1
+
+				status_message = self.__info_parent.format(item.text(0), string_plural(tags), string_plural(attributes, 'attributes'))
+			else:
+				status_message = self.__info_child.format(item.text(0), item.parent().text(0))
+			
+		except AttributeError:
+			status_message = 'Info: ...'
+
+		self.status_hook.showMessage(status_message)
+
 
 # -- XML -----------------------------------
 class trw_xml_explorer(trw_tree_explorer):
@@ -232,7 +262,35 @@ class trw_xml_explorer(trw_tree_explorer):
 
 class trw_plist_explorer(trw_tree_explorer):
 	''' pList parsing and exporting tree widget'''
+	def __init__(self, status_hook):
+		super(trw_plist_explorer, self).__init__(status_hook)
 
+		# - String
+		self.__info_parent = 'Info: Parent <{}> with {} / {}'
+		self.__info_child =  'Info: Child "{}" of <{}>'
+
+	# - Internals
+	@QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem, int)
+	def set_status(self, item, col):
+		status_message = ''
+		try:
+			if item.childCount() and (item.text(2) == 'dict' or item.text(2) == 'list'):
+				parents, children = 0, 0
+
+				for c in range(item.childCount()):
+					if item.child(c).childCount():
+						parents += 1
+					else:
+						children += 1
+
+				status_message = self.__info_parent.format(item.text(0), string_plural(parents), string_plural(children, 'children', 3))
+			else:
+				status_message = self.__info_child.format(item.text(0), item.parent().text(0))
+		except AttributeError:
+			status_message = 'Info: ...'
+			
+		self.status_hook.showMessage(status_message)	
+	
 	# - Getter/Setter -----------------------
 	def __tree_walker_set(self, node, parent):
 		if isinstance(node, tuple):
