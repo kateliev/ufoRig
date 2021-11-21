@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.11
+__version__ = 1.13
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -64,14 +64,13 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 		self.font_bold = set_font(self, 'b')
 		self.font_italic = set_font(self, 'i')
 		self.brush_gray = set_color('Gray')
-		self.attrib_background = set_color('Yellow', 15)
 
 		# -- Icons
 		self.folder_attrib_name = 'attributes'
-		self.folder_attrib_icon = self.style().standardIcon(QtWidgets.QStyle.SP_FileIcon)
+		self.icon_child = self.style().standardIcon(QtWidgets.QStyle.SP_FileIcon)
 		
 		self.folder_children_name = 'children'
-		self.folder_children_icon = self.style().standardIcon(QtWidgets.QStyle.SP_DirIcon)	
+		self.icon_parent = self.style().standardIcon(QtWidgets.QStyle.SP_DirIcon)	
 
 		# - Menus
 		self.menu_context = QtWidgets.QMenu(self)
@@ -129,11 +128,11 @@ class trw_tree_explorer(QtWidgets.QTreeWidget):
 		new_item.setForeground(2, self.brush_gray)
 		
 		if is_parent:	
-			new_item.setIcon(0, self.folder_children_icon)
+			new_item.setIcon(0, self.icon_parent)
 			new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
 		else:
 			new_item.setFlags(new_item.flags() & ~QtCore.Qt.ItemIsDropEnabled | QtCore.Qt.ItemIsEditable)
-			new_item.setIcon(0, self.folder_attrib_icon)
+			new_item.setIcon(0, self.icon_child)
 
 		parent = self.selectedItems()[0].parent()
 		parent.addChild(new_item)
@@ -197,20 +196,17 @@ class trw_xml_explorer(trw_tree_explorer):
 		
 		# - Set Icon
 		if len(list(node)) or len(node.attrib):	
-			new_item.setIcon(0, self.folder_children_icon)
+			new_item.setIcon(0, self.icon_parent)
 		else:
-			new_item.setIcon(0, self.folder_attrib_icon)
+			new_item.setIcon(0, self.icon_child)
 
 		# - Set Attribute
 		for pair in node.attrib.items():
 			new_attribute = QtWidgets.QTreeWidgetItem(new_item, [pair[0], pair[1], 'attribute'])
 			new_attribute.setFlags(new_item.flags() & ~QtCore.Qt.ItemIsDropEnabled | QtCore.Qt.ItemIsEditable)
-			new_attribute.setIcon(0, self.folder_attrib_icon)
+			new_attribute.setIcon(0, self.icon_child)
 			new_attribute.setFont(2, self.font_italic)
 			new_attribute.setForeground(2, self.brush_gray)
-			
-			for col in range(self.columnCount()):
-				new_attribute.setBackground(col, self.attrib_background)
 
 		# - Set Children
 		if len(node):
@@ -295,34 +291,30 @@ class trw_plist_explorer(trw_tree_explorer):
 			new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
 			new_item.setForeground(2, self.brush_gray)
 			new_item.setFont(2, self.font_italic)
-			new_item.setIcon(0, self.folder_attrib_icon)
+			new_item.setIcon(0, self.icon_child)
 
 			if isinstance(node_data, (list, dict)):
-				node_data_list = node_data.values() if isinstance(node_data, dict) else node_data
-				if any([isinstance(item, (list, dict)) for item in node_data_list]):
-					new_item.setIcon(0, self.folder_children_icon)
-					new_item.setText(1, '')
-
+				new_item.setIcon(0, self.icon_parent)
+				new_item.setText(1,'')
 				self.__tree_walker_set(node_data, new_item)
 
 		elif isinstance(node, list):
 			for item in node:
-				if isinstance(item, (list, dict)):
-					sub_node_type = str(type(item).__name__)
-					new_sub_item = QtWidgets.QTreeWidgetItem(parent, ['List Item', '', sub_node_type])
-					new_sub_item.setIcon(0, self.folder_children_icon)
-					new_sub_item.setForeground(0, self.brush_gray)
-					new_sub_item.setFont(0, self.font_italic)
-					new_sub_item.setForeground(2, self.brush_gray)
-					new_sub_item.setFont(2, self.font_italic)
-
-					self.__tree_walker_set(item, new_sub_item)
-				else:
-					self.__tree_walker_set(item, parent)
+				self.__tree_walker_set(item, parent)
 		
 		elif isinstance(node, dict):
+			parent.setText(2,'dict')
 			for item in node.items():
 				self.__tree_walker_set(item, parent)
+		else:
+			node_type = str(type(node).__name__)
+			new_item = QtWidgets.QTreeWidgetItem(parent, ['List Item', str(node), node_type])
+			new_item.setFlags(new_item.flags() | QtCore.Qt.ItemIsEditable)
+			new_item.setIcon(0, self.icon_child)
+			new_item.setForeground(0, self.brush_gray)
+			new_item.setFont(0, self.font_italic)
+			new_item.setForeground(2, self.brush_gray)
+			new_item.setFont(2, self.font_italic)
 		
 	def __tree_walker_get(self, node):
 		node_name, node_value, node_type = node.text(0), node.text(1), node.text(2)
