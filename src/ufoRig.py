@@ -18,10 +18,10 @@ from lib import widgets
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 # - Init ----------------------------------------------------
-app_name, app_version = 'ufoRig', '1.37'
+app_name, app_version = 'ufoRig', '1.38'
 
 # - Config --------------------------------------------------
-cfg_file_open_formats = 'UFO Designspace (*.designspace);; UFO (*.plist);;'
+cfg_file_open_formats = 'UFO Designspace (*.designspace);; UFO Plist (*.plist);; UFO (*.ufo);;'
 
 # - Dialogs and Main -----------------------------------------	
 class main_ufoRig(QtWidgets.QMainWindow):
@@ -49,11 +49,14 @@ class main_ufoRig(QtWidgets.QMainWindow):
 
 		# -- Actions
 		act_data_open_file = QtWidgets.QAction('Open', self)
+		act_data_open_folder = QtWidgets.QAction('Open UFO', self)
 		act_data_save_file = QtWidgets.QAction('Save', self)
 		act_data_open_file.triggered.connect(self.file_open)
+		act_data_open_folder.triggered.connect(self.folder_open)
 		act_data_save_file.triggered.connect(self.file_save)
 		
 		self.menu_file.addAction(act_data_open_file)
+		self.menu_file.addAction(act_data_open_folder)
 		self.menu_file.addAction(act_data_save_file)
 	
 		# -- Set Menu
@@ -112,6 +115,26 @@ class main_ufoRig(QtWidgets.QMainWindow):
 				self.wgt_tabs.addTab(widgets.wgt_plist_manager((tab_caption, file_tree), self.status_bar), tab_caption)
 
 		self.status_bar.showMessage('File Loaded: {}'.format(import_file[0]))
+
+	def folder_open(self):
+		curr_path = pathlib.Path(__file__).parent.absolute()
+		import_folder = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open UFO', str(curr_path))
+		collect_ufo_plist = list(pathlib.Path(import_folder).rglob('*.plist'))
+		
+		if len(collect_ufo_plist):
+			tab_caption = os.path.split(import_folder)[1]
+			data_tree = []
+			
+			for import_file in collect_ufo_plist:
+				with open(import_file, 'rb') as plist_file:
+					file_tree = plistlib.load(plist_file)
+
+				data_tree.append((import_file.name, file_tree))
+
+			if len(data_tree):
+				self.wgt_tabs.addTab(widgets.wgt_plist_manager(data_tree, self.status_bar), tab_caption)
+
+		self.status_bar.showMessage('Loaded: {}'.format(import_folder))
 
 # - Run -----------------------------
 main_app = QtWidgets.QApplication(sys.argv)

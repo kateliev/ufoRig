@@ -4,7 +4,7 @@
 # ------------------------------------------------------------
 # https://github.com/kateliev
 
-__version__ = 1.9
+__version__ = 1.11
 
 # - Dependencies --------------------------------------------
 import plistlib
@@ -266,7 +266,7 @@ class trw_plist_explorer(trw_tree_explorer):
 		super(trw_plist_explorer, self).__init__(status_hook)
 
 		# - String
-		self.__info_parent = 'Info: Parent <{}> with {} / {}'
+		self.__info_parent = 'Info: Parent <{}> with {}'
 		self.__info_child =  'Info: Child "{}" of <{}>'
 
 	# - Internals
@@ -275,15 +275,8 @@ class trw_plist_explorer(trw_tree_explorer):
 		status_message = ''
 		try:
 			if item.childCount() and (item.text(2) == 'dict' or item.text(2) == 'list'):
-				parents, children = 0, 0
-
-				for c in range(item.childCount()):
-					if item.child(c).childCount():
-						parents += 1
-					else:
-						children += 1
-
-				status_message = self.__info_parent.format(item.text(0), string_plural(parents), string_plural(children, 'children', 3))
+				children = item.childCount()
+				status_message = self.__info_parent.format(item.text(0), string_plural(children, 'children', 3))
 			else:
 				status_message = self.__info_child.format(item.text(0), item.parent().text(0))
 		except AttributeError:
@@ -344,6 +337,20 @@ class trw_plist_explorer(trw_tree_explorer):
 		return new_element.export(evaluate=True)
 
 	def set_tree(self, data, headers):
+		self.blockSignals(True)
+		self.clear()
+		self.setHeaderLabels(headers)
+			
+		# - Insert 
+		self.__tree_walker_set(data, self)
+
+		# - Format
+		self.expandAll()
+		for c in range(self.columnCount()):
+			self.resizeColumnToContents(c)	
+		self.collapseAll()
+
+	def set_tree_multy(self, data, headers):
 		self.blockSignals(True)
 		self.clear()
 		self.setHeaderLabels(headers)
